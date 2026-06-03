@@ -3214,6 +3214,20 @@ select.detail-edit-input option{background:var(--bg-elevated);color:var(--text-1
           <option value="support">Support</option><option value="admin">Admin</option>
         </select>
       </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+        <label style="font-size:12px;font-weight:600;color:var(--text-2)">Dashboard Mode</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div id="tm-mode-personal" onclick="tmSetMode('personal')" style="padding:12px;border:2px solid var(--accent);border-radius:var(--radius-sm);cursor:pointer;background:var(--accent-soft);transition:all var(--transition)">
+            <div style="font-weight:600;font-size:13px;margin-bottom:3px">👤 Personal</div>
+            <div style="font-size:11px;color:var(--text-2)">Own fresh dashboard. Their work shows on your admin view.</div>
+          </div>
+          <div id="tm-mode-shared" onclick="tmSetMode('shared')" style="padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;background:transparent;transition:all var(--transition)">
+            <div style="font-weight:600;font-size:13px;margin-bottom:3px">🔗 Shared</div>
+            <div style="font-size:11px;color:var(--text-2)">Same CRM data as admin. Full access to everything.</div>
+          </div>
+        </div>
+        <input type="hidden" id="tm-inv-mode" value="personal"/>
+      </div>
       <div style="padding:14px;background:var(--bg-elevated);border-radius:var(--radius-sm);font-size:12px;color:var(--text-2);margin-bottom:16px">
         📧 An invite link will be generated. Share it with the member so they can create their account and access their personal dashboard.
       </div>
@@ -6540,7 +6554,7 @@ async function tmRender(){
 
 function tmLoadDemo(){
   tmMembers = [
-    {id:1,first_name:'Sarah',last_name:'Johnson',email:'sarah@agency.com',role:'manager',status:'active',created_at:'2024-01-15'},
+    {id:1,first_name:'Sarah',last_name:'Johnson',email:'sarah@agency.com',role:'manager',status:'active',created_at:'2024-01-15',dashboard_mode:'shared'},
     {id:2,first_name:'Marcus',last_name:'Chen',email:'marcus@agency.com',role:'developer',status:'active',created_at:'2024-02-20'},
     {id:3,first_name:'Aisha',last_name:'Rivera',email:'aisha@agency.com',role:'designer',status:'active',created_at:'2024-03-10'},
     {id:4,first_name:'Tyler',last_name:'Brooks',email:'tyler@agency.com',role:'sales',status:'pending',created_at:'2024-06-01'},
@@ -6574,7 +6588,9 @@ function tmDraw(){
       rows += '<td style="padding:12px 14px;border-bottom:1px solid var(--border-light);vertical-align:middle"><span style="display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;'+rc+'">'+roleName+'</span></td>';
       rows += '<td style="padding:12px 14px;border-bottom:1px solid var(--border-light);vertical-align:middle"><span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;background:var(--success-soft);color:var(--success)">Active</span></td>';
       rows += '<td style="padding:12px 14px;border-bottom:1px solid var(--border-light);color:var(--text-2)">'+joined+'</td>';
-      rows += '<td style="padding:12px 14px;border-bottom:1px solid var(--border-light)"><a href="https://small-crm-h45u.vercel.app/team-dashboard.html?member='+m.id+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:var(--radius-sm);font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--bg-elevated);color:var(--text-1);text-decoration:none">View Dashboard</a></td>';
+      var modeLabel = m.dashboard_mode === 'shared' ? '🔗 Shared' : '👤 Personal';
+      var modeBg = m.dashboard_mode === 'shared' ? 'background:var(--info-soft);color:var(--info)' : 'background:var(--accent-soft);color:var(--accent)';
+      rows += '<td style="padding:12px 14px;border-bottom:1px solid var(--border-light)"><div style="display:flex;align-items:center;gap:8px"><span style="display:inline-flex;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:600;'+modeBg+'">'+modeLabel+'</span><a href="https://small-crm-h45u.vercel.app/team-dashboard.html?member='+m.id+'&mode='+(m.dashboard_mode||'personal')+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:var(--radius-sm);font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--bg-elevated);color:var(--text-1);text-decoration:none">View</a></div></td>';
       rows += '<td style="padding:12px 14px;border-bottom:1px solid var(--border-light)"><button onclick="tmOpenRemove('+m.id+',\''+m.first_name+' '+m.last_name+'\')" style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:var(--radius-sm);font-size:12px;font-weight:500;cursor:pointer;border:none;background:var(--danger-soft);color:var(--danger);font-family:inherit">Remove</button></td>';
       rows += '</tr>';
     });
@@ -6597,6 +6613,23 @@ function tmDraw(){
     pl.innerHTML = pitems;
   }
 }
+function tmSetMode(mode){
+  document.getElementById('tm-inv-mode').value = mode;
+  var personal = document.getElementById('tm-mode-personal');
+  var shared = document.getElementById('tm-mode-shared');
+  if(mode === 'personal'){
+    personal.style.border = '2px solid var(--accent)';
+    personal.style.background = 'var(--accent-soft)';
+    shared.style.border = '2px solid var(--border)';
+    shared.style.background = 'transparent';
+  } else {
+    shared.style.border = '2px solid var(--accent)';
+    shared.style.background = 'var(--accent-soft)';
+    personal.style.border = '2px solid var(--border)';
+    personal.style.background = 'transparent';
+  }
+}
+
 function tmFilter(){
   const q = (document.getElementById('tm-search').value||'').toLowerCase();
   const role = document.getElementById('tm-role-filter').value;
@@ -6625,13 +6658,14 @@ async function tmSendInvite(){
   const last=(document.getElementById('tm-inv-last').value||'').trim();
   const email=(document.getElementById('tm-inv-email').value||'').trim();
   const role=document.getElementById('tm-inv-role').value;
+  const mode=document.getElementById('tm-inv-mode').value||'personal';
   if(!first||!email){showToast('First name and email required','error');return;}
   const btn=document.getElementById('tm-send-btn');
   btn.textContent='Sending...';btn.disabled=true;
-  const link='https://small-crm-h45u.vercel.app/team-signup.html?invite='+btoa(email+'|'+role+'|'+first+'|'+last);
+  const link='https://small-crm-h45u.vercel.app/team-signup.html?invite='+btoa(email+'|'+role+'|'+first+'|'+last+'|'+mode);
   try{
     if(tmSB){
-      const {error}=await tmSB.from('team_members').insert({first_name:first,last_name:last,email,role,status:'pending'});
+      const {error}=await tmSB.from('team_members').insert({first_name:first,last_name:last,email,role,status:'pending',dashboard_mode:mode});
       if(error)throw error;
     }
     tmMembers.unshift({id:Date.now(),first_name:first,last_name:last,email,role,status:'pending',created_at:new Date().toISOString()});
