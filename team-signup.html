@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AgencyOS — Join Your Team</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg-base:#0f0f11;--bg-card:#1a1a1e;--bg-elevated:#222227;--bg-hover:#2a2a30;--bg-input:#1f1f24;
+  --border:#32323a;--border-light:#28282f;--text-1:#ffffff;--text-2:#c8c8d8;--text-3:#8888a0;
+  --accent:#8b5cf6;--accent-soft:rgba(139,92,246,.12);--accent-glow:rgba(139,92,246,.25);
+  --success:#22c55e;--success-soft:rgba(34,197,94,.12);--danger:#ef4444;--danger-soft:rgba(239,68,68,.12);
+  --radius:12px;--radius-sm:8px;--radius-lg:16px;--transition:.18s cubic-bezier(.4,0,.2,1);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+html,body{height:100%;background:var(--bg-base);color:var(--text-1);font-family:'Inter',sans-serif;font-size:14px;display:flex;align-items:center;justify-content:center}
+.bg-grid{position:fixed;inset:0;background-image:linear-gradient(var(--border-light) 1px,transparent 1px),linear-gradient(90deg,var(--border-light) 1px,transparent 1px);background-size:40px 40px;opacity:.3;pointer-events:none}
+.glow{position:fixed;top:-200px;left:50%;transform:translateX(-50%);width:600px;height:400px;background:radial-gradient(ellipse,rgba(139,92,246,.15) 0%,transparent 70%);pointer-events:none}
+.signup-wrap{width:100%;max-width:440px;padding:20px;position:relative;z-index:1}
+.logo{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:32px}
+.logo-icon{width:40px;height:40px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 24px var(--accent-glow)}
+.logo-text{font-size:20px;font-weight:700}
+.logo-text span{color:var(--accent)}
+.card{background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:32px;box-shadow:0 24px 80px rgba(0,0,0,.5)}
+.card-title{font-size:20px;font-weight:700;letter-spacing:-.4px;margin-bottom:4px}
+.card-sub{font-size:13px;color:var(--text-2);margin-bottom:24px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-label{font-size:12px;font-weight:600;color:var(--text-2);letter-spacing:.2px}
+.form-control{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text-1);font-size:13px;font-family:inherit;transition:all var(--transition);outline:none;width:100%}
+.form-control:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.form-control::placeholder{color:var(--text-3)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.password-wrap{position:relative}
+.password-wrap .form-control{padding-right:40px}
+.pw-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-3);transition:color var(--transition);padding:4px}
+.pw-toggle:hover{color:var(--text-1)}
+.pw-strength{height:3px;border-radius:3px;margin-top:6px;background:var(--bg-hover);overflow:hidden}
+.pw-strength-bar{height:100%;border-radius:3px;transition:width .3s ease,background .3s ease;width:0}
+.pw-hint{font-size:11px;color:var(--text-3);margin-top:4px}
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:11px;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all var(--transition);font-family:inherit}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 0 0 0 var(--accent-glow)}
+.btn-primary:hover{background:#7c3aed;box-shadow:0 0 20px var(--accent-glow)}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed}
+.divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--text-3);font-size:12px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border-light)}
+.role-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;background:var(--accent-soft);color:var(--accent);margin-bottom:20px}
+.invite-info{background:var(--bg-elevated);border:1px solid var(--border-light);border-radius:var(--radius-sm);padding:14px;margin-bottom:20px;display:flex;align-items:center;gap:10px}
+.invite-info-text{font-size:13px;color:var(--text-2)}
+.invite-info-text strong{color:var(--text-1)}
+.error-msg{background:var(--danger-soft);border:1px solid var(--danger);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--danger);margin-bottom:14px;display:none}
+.success-card{text-align:center;display:none}
+.success-icon{width:64px;height:64px;background:var(--success-soft);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px}
+.success-title{font-size:20px;font-weight:700;margin-bottom:8px}
+.success-sub{font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:24px}
+.footer-link{text-align:center;margin-top:20px;font-size:12px;color:var(--text-3)}
+.footer-link a{color:var(--accent);text-decoration:none}
+.footer-link a:hover{text-decoration:underline}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.signup-wrap{animation:fadeIn .3s ease}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="glow"></div>
+<div class="signup-wrap">
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    <div class="logo-text">Agency<span>OS</span></div>
+  </div>
+
+  <div class="card">
+    <!-- FORM STATE -->
+    <div id="formState">
+      <div class="card-title">Join Your Team</div>
+      <div class="card-sub">Set up your account to access your team dashboard</div>
+
+      <div id="inviteInfo" class="invite-info" style="display:none">
+        <span style="font-size:18px">📨</span>
+        <div class="invite-info-text">You've been invited as <strong id="inviteRoleDisplay"></strong></div>
+      </div>
+
+      <div id="errorMsg" class="error-msg"></div>
+
+      <form onsubmit="handleSignup(event)">
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">First Name</label><input type="text" class="form-control" id="firstName" placeholder="Jane" required/></div>
+          <div class="form-group"><label class="form-label">Last Name</label><input type="text" class="form-control" id="lastName" placeholder="Smith"/></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-control" id="emailField" placeholder="you@company.com" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div class="password-wrap">
+            <input type="password" class="form-control" id="passwordField" placeholder="Create a strong password" required oninput="checkStrength(this.value)"/>
+            <button type="button" class="pw-toggle" onclick="togglePw('passwordField',this)">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <div class="pw-strength"><div class="pw-strength-bar" id="pwBar"></div></div>
+          <div class="pw-hint" id="pwHint">Use 8+ characters with numbers and symbols</div>
+        </div>
+        <div class="form-group" style="margin-bottom:20px">
+          <label class="form-label">Confirm Password</label>
+          <div class="password-wrap">
+            <input type="password" class="form-control" id="confirmField" placeholder="Repeat your password" required/>
+            <button type="button" class="pw-toggle" onclick="togglePw('confirmField',this)">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary" id="submitBtn">Create Account & Join</button>
+      </form>
+
+      <div class="footer-link" style="margin-top:16px">Already have an account? <a href="team-dashboard.html">Sign in →</a></div>
+    </div>
+
+    <!-- SUCCESS STATE -->
+    <div class="success-card" id="successState">
+      <div class="success-icon">🎉</div>
+      <div class="success-title">You're all set!</div>
+      <div class="success-sub">Your account has been created. Check your email to verify, then you'll have full access to your team dashboard.</div>
+      <button class="btn btn-primary" onclick="window.location.href='team-dashboard.html?mode='+(window._inviteMode||'personal')">Go to My Dashboard</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// SUPABASE CONFIG — same values as team-manage.html
+// ============================================================
+const SUPABASE_URL = 'https://jcykegsgqvxtngxtmnmv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjeWtlZ3NncXZ4dG5neHRtbm12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NTcxNjIsImV4cCI6MjA5NjAzMzE2Mn0.rsBiwmBZHh1yWR7e5To2jk0-0u9Ef6LDX7NxMHX3t7M';
+// ============================================================
+
+let sb = null;
+
+function init() {
+  if (SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+  // Parse invite params from URL
+  const params = new URLSearchParams(window.location.search);
+  const invite = params.get('invite');
+  if (invite) {
+    try {
+      const parts = atob(invite).split('|');
+      const email = parts[0], role = parts[1], first = parts[2]||'', last = parts[3]||'';
+      document.getElementById('emailField').value = email;
+      document.getElementById('emailField').readOnly = true;
+      if (first) document.getElementById('firstName').value = first;
+      if (last) document.getElementById('lastName').value = last;
+      if (role) {
+        const roleEl = document.getElementById('inviteRoleDisplay');
+        roleEl.textContent = role.charAt(0).toUpperCase()+role.slice(1);
+        document.getElementById('inviteInfo').style.display = 'flex';
+      }
+      // Store mode for redirect after signup
+      const mode = parts[4] || 'personal';
+      window._inviteMode = mode;
+    } catch(e) {}
+  }
+  // Handle Supabase auth redirect (magic link / invite)
+  if (window.location.hash.includes('access_token')) {
+    handleAuthRedirect();
+  }
+}
+
+async function handleAuthRedirect() {
+  if (!sb) return;
+  try {
+    const { data: { session }, error } = await sb.auth.getSession();
+    if (session) {
+      // Update user metadata
+      document.getElementById('formState').style.display = 'none';
+      document.getElementById('successState').style.display = 'block';
+    }
+  } catch(e) { console.error(e); }
+}
+
+async function handleSignup(e) {
+  e.preventDefault();
+  const first = document.getElementById('firstName').value.trim();
+  const last = document.getElementById('lastName').value.trim();
+  const email = document.getElementById('emailField').value.trim();
+  const pw = document.getElementById('passwordField').value;
+  const pw2 = document.getElementById('confirmField').value;
+  const errEl = document.getElementById('errorMsg');
+
+  errEl.style.display = 'none';
+  if (pw !== pw2) { showError('Passwords do not match'); return; }
+  if (pw.length < 8) { showError('Password must be at least 8 characters'); return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.innerHTML = '<div class="spinner"></div> Creating account…';
+  btn.disabled = true;
+
+  try {
+    if (sb) {
+      const { data, error } = await sb.auth.signUp({
+        email, password: pw,
+        options: { data: { first_name: first, last_name: last } }
+      });
+      if (error) throw error;
+      // Update team_members status to active
+      await sb.from('team_members').update({ status: 'active' }).eq('email', email);
+    }
+    // Show success
+    document.getElementById('formState').style.display = 'none';
+    document.getElementById('successState').style.display = 'block';
+  } catch(err) {
+    showError(err.message || 'Signup failed — please try again');
+    btn.innerHTML = 'Create Account & Join'; btn.disabled = false;
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+function togglePw(id, btn) {
+  const input = document.getElementById(id);
+  const isText = input.type === 'text';
+  input.type = isText ? 'password' : 'text';
+  btn.style.color = isText ? 'var(--text-3)' : 'var(--accent)';
+}
+
+function checkStrength(pw) {
+  const bar = document.getElementById('pwBar');
+  const hint = document.getElementById('pwHint');
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^a-zA-Z0-9]/.test(pw)) score++;
+  const pct = (score/4)*100;
+  bar.style.width = pct+'%';
+  if (score <= 1) { bar.style.background='var(--danger)'; hint.textContent='Weak — add numbers and symbols'; }
+  else if (score === 2) { bar.style.background='var(--warning)'; hint.textContent='Fair — try a longer password'; }
+  else if (score === 3) { bar.style.background='var(--info)'; hint.textContent='Good password'; }
+  else { bar.style.background='var(--success)'; hint.textContent='Strong password ✓'; }
+}
+
+init();
+</script>
+</body>
+</html>

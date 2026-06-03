@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AgencyOS — My Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg-base:#0f0f11;--bg-card:#1a1a1e;--bg-elevated:#222227;--bg-hover:#2a2a30;--bg-input:#1f1f24;
+  --border:#32323a;--border-light:#28282f;--text-1:#ffffff;--text-2:#c8c8d8;--text-3:#8888a0;
+  --accent:#8b5cf6;--accent-rgb:139,92,246;--accent-soft:rgba(139,92,246,.12);--accent-glow:rgba(139,92,246,.25);
+  --success:#22c55e;--success-soft:rgba(34,197,94,.12);--warning:#f59e0b;--warning-soft:rgba(245,158,11,.12);
+  --danger:#ef4444;--danger-soft:rgba(239,68,68,.12);--info:#3b82f6;--info-soft:rgba(59,130,246,.12);
+  --sidebar-w:240px;--header-h:60px;--radius:12px;--radius-sm:8px;--radius-lg:16px;
+  --shadow:0 4px 24px rgba(0,0,0,.4);--shadow-sm:0 2px 8px rgba(0,0,0,.3);--transition:.18s cubic-bezier(.4,0,.2,1);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+html,body{height:100%;overflow:hidden;background:var(--bg-base);color:var(--text-1);font-family:'Inter',sans-serif;font-size:14px}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+#app{display:flex;height:100vh;overflow:hidden}
+/* SIDEBAR */
+.sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);height:100vh;background:var(--bg-card);border-right:1px solid var(--border-light);display:flex;flex-direction:column;z-index:100;transition:width var(--transition)}
+.sidebar.collapsed{width:60px;min-width:60px}
+.sidebar.collapsed .nav-label,.sidebar.collapsed .sidebar-logo-text,.sidebar.collapsed .sidebar-section-title,.sidebar.collapsed .sidebar-footer-text{display:none}
+.sidebar.collapsed .nav-item{justify-content:center;padding:10px}
+.sidebar-logo{display:flex;align-items:center;gap:10px;padding:18px 16px;border-bottom:1px solid var(--border-light)}
+.sidebar-logo-icon{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;box-shadow:0 0 16px var(--accent-glow)}
+.sidebar-logo-text{font-size:16px;font-weight:700;letter-spacing:-.3px;white-space:nowrap}.sidebar-logo-text span{color:var(--accent)}
+.sidebar-nav{flex:1;overflow-y:auto;padding:12px 8px;display:flex;flex-direction:column;gap:2px}
+.sidebar-section-title{font-size:10px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--text-3);padding:12px 8px 4px;white-space:nowrap}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition);color:var(--text-2);position:relative;text-decoration:none}
+.nav-item:hover{background:var(--bg-hover);color:var(--text-1)}
+.nav-item.active{background:var(--accent-soft);color:var(--accent)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:18px;background:var(--accent);border-radius:0 3px 3px 0}
+.nav-icon{width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px}
+.nav-label{font-size:13px;font-weight:500;white-space:nowrap;flex:1}
+.nav-badge{background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:20px;min-width:18px;text-align:center}
+.sidebar-footer{padding:12px 8px;border-top:1px solid var(--border-light)}
+.sidebar-footer-user{display:flex;align-items:center;gap:10px;padding:8px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition)}
+.sidebar-footer-user:hover{background:var(--bg-hover)}
+.avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#7c3aed);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;color:#fff}
+.avatar-sm{width:26px;height:26px;font-size:10px}
+.sidebar-footer-text{overflow:hidden}
+.sidebar-footer-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-footer-role{font-size:11px;color:var(--text-3)}
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.header{height:var(--header-h);min-height:var(--header-h);background:var(--bg-card);border-bottom:1px solid var(--border-light);display:flex;align-items:center;padding:0 20px;gap:12px;z-index:50}
+.header-toggle{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);cursor:pointer;color:var(--text-2);transition:all var(--transition);flex-shrink:0;border:none;background:none}
+.header-toggle:hover{background:var(--bg-hover);color:var(--text-1)}
+.header-breadcrumb{flex:1;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-2)}
+.header-breadcrumb strong{color:var(--text-1);font-weight:600}
+.header-search{display:flex;align-items:center;gap:8px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 12px;width:220px;transition:all var(--transition)}
+.header-search:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.header-search input{background:none;border:none;outline:none;color:var(--text-1);font-size:13px;width:100%;font-family:inherit}
+.header-search input::placeholder{color:var(--text-3)}
+.header-actions{display:flex;align-items:center;gap:6px}
+.icon-btn{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);cursor:pointer;color:var(--text-2);transition:all var(--transition);border:none;background:none;position:relative}
+.icon-btn:hover{background:var(--bg-hover);color:var(--text-1)}
+.notif-dot{position:absolute;top:6px;right:6px;width:7px;height:7px;background:var(--danger);border-radius:50%;border:2px solid var(--bg-card)}
+.profile-btn{display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition)}
+.profile-btn:hover{background:var(--bg-hover)}
+/* CONTENT */
+.content{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:20px}
+.page{display:none;flex-direction:column;gap:20px;animation:fadeIn .2s ease}
+.page.active{display:flex}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.page-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.page-title{font-size:22px;font-weight:700;letter-spacing:-.4px}
+.page-subtitle{font-size:13px;color:var(--text-2);margin-top:2px}
+.page-actions{display:flex;align-items:center;gap:8px}
+/* CARDS */
+.card{background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius);padding:20px;transition:all var(--transition)}
+.card:hover{border-color:var(--border)}
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.stat-card{background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:24px 22px;display:flex;flex-direction:column;gap:14px;transition:all var(--transition);cursor:default}
+.stat-card:hover{border-color:var(--border);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.stat-card-header{display:flex;align-items:center;justify-content:space-between}
+.stat-icon{width:48px;height:48px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:22px}
+.stat-trend{font-size:12px;font-weight:700;padding:3px 8px;border-radius:20px}
+.trend-up{background:var(--success-soft);color:var(--success)}
+.stat-value{font-size:32px;font-weight:800;letter-spacing:-.8px;line-height:1}
+.stat-label{font-size:13px;color:var(--text-2);font-weight:500}
+/* GRIDS */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all var(--transition);font-family:inherit;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#7c3aed;box-shadow:0 0 16px var(--accent-glow)}
+.btn-secondary{background:var(--bg-elevated);color:var(--text-1);border:1px solid var(--border)}.btn-secondary:hover{background:var(--bg-hover)}
+.btn-ghost{background:none;color:var(--text-2);border:1px solid transparent}.btn-ghost:hover{background:var(--bg-hover);color:var(--text-1)}
+.btn-sm{padding:5px 10px;font-size:12px}
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.badge-accent{background:var(--accent-soft);color:var(--accent)}.badge-success{background:var(--success-soft);color:var(--success)}
+.badge-warning{background:var(--warning-soft);color:var(--warning)}.badge-danger{background:var(--danger-soft);color:var(--danger)}
+.badge-info{background:var(--info-soft);color:var(--info)}.badge-gray{background:var(--bg-hover);color:var(--text-2)}
+.badge-dot::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}
+/* TABLE */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3);border-bottom:1px solid var(--border-light);white-space:nowrap}
+tbody td{padding:12px 14px;border-bottom:1px solid var(--border-light);font-size:13px;vertical-align:middle}
+tbody tr{transition:background var(--transition)}.tbody tr:hover{background:var(--bg-hover)}
+tbody tr:last-child td{border-bottom:none}
+/* PROGRESS */
+.progress{height:5px;background:var(--bg-hover);border-radius:10px;overflow:hidden}
+.progress-bar{height:100%;background:var(--accent);border-radius:10px;transition:width .4s ease}
+.progress-bar.success{background:var(--success)}.progress-bar.warning{background:var(--warning)}
+/* CHART */
+.chart-wrap{position:relative;width:100%;height:220px}
+/* TABS */
+.tabs{display:flex;align-items:center;gap:2px;background:var(--bg-elevated);border-radius:var(--radius-sm);padding:3px}
+.tab{padding:6px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;cursor:pointer;transition:all var(--transition);color:var(--text-2);white-space:nowrap}
+.tab.active{background:var(--bg-card);color:var(--text-1);box-shadow:var(--shadow-sm)}
+/* WELCOME BANNER */
+.welcome-banner{background:linear-gradient(135deg,rgba(139,92,246,.15),rgba(139,92,246,.05));border:1px solid rgba(139,92,246,.2);border-radius:var(--radius-lg);padding:24px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.welcome-title{font-size:20px;font-weight:700;margin-bottom:4px}
+.welcome-sub{font-size:13px;color:var(--text-2)}
+.welcome-emoji{font-size:48px;flex-shrink:0}
+/* ACTIVITY FEED */
+.activity-item{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-light)}
+.activity-item:last-child{border-bottom:none}
+.activity-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.activity-text{flex:1;font-size:13px;color:var(--text-2);line-height:1.5}
+.activity-text strong{color:var(--text-1)}
+.activity-time{font-size:11px;color:var(--text-3);white-space:nowrap}
+/* TASK ITEM */
+.task-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-light)}
+.task-item:last-child{border-bottom:none}
+.task-check{width:18px;height:18px;border-radius:5px;border:2px solid var(--border);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all var(--transition)}
+.task-check.done{background:var(--success);border-color:var(--success)}
+.task-check.done::after{content:'✓';font-size:10px;color:#fff;font-weight:700}
+.task-text{flex:1;font-size:13px}
+.task-text.done{text-decoration:line-through;color:var(--text-3)}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex;animation:fadeIn .15s ease}
+.modal{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:420px;box-shadow:0 24px 80px rgba(0,0,0,.6)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border-light)}
+.modal-title{font-size:16px;font-weight:700}
+.modal-body{padding:24px}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border-light);display:flex;justify-content:flex-end;gap:8px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-label{font-size:12px;font-weight:600;color:var(--text-2);letter-spacing:.2px}
+.form-control{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text-1);font-size:13px;font-family:inherit;transition:all var(--transition);outline:none;width:100%}
+.form-control:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}.form-control::placeholder{color:var(--text-3)}
+select.form-control option{background:var(--bg-elevated)}
+textarea.form-control{resize:vertical;min-height:80px}
+/* DROPDOWN */
+.dropdown{position:relative}
+.dropdown-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-sm);min-width:160px;box-shadow:var(--shadow);z-index:200;display:none}
+.dropdown-menu.open{display:block;animation:fadeIn .1s ease}
+.dropdown-item{padding:9px 14px;font-size:13px;cursor:pointer;color:var(--text-2);transition:all var(--transition)}
+.dropdown-item:hover{background:var(--bg-hover);color:var(--text-1)}
+.dropdown-divider{height:1px;background:var(--border-light);margin:4px 0}
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:var(--text-1);box-shadow:var(--shadow);z-index:2000;transform:translateY(80px);opacity:0;transition:all .3s ease;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}.toast.success{border-color:var(--success)}.toast.error{border-color:var(--danger)}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- SIDEBAR -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">⚡</div>
+      <div class="sidebar-logo-text">Agency<span>OS</span></div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="sidebar-section-title">My Workspace</div>
+      <div class="nav-item active" onclick="switchPage('dashboard',this)">
+        <div class="nav-icon">📊</div>
+        <div class="nav-label">Dashboard</div>
+      </div>
+      <div class="nav-item" onclick="switchPage('tasks',this)">
+        <div class="nav-icon">✅</div>
+        <div class="nav-label">My Tasks</div>
+        <div class="nav-badge" id="taskBadge">3</div>
+      </div>
+      <div class="nav-item" onclick="switchPage('projects',this)">
+        <div class="nav-icon">📁</div>
+        <div class="nav-label">Projects</div>
+      </div>
+      <div class="nav-item" onclick="switchPage('messages',this)">
+        <div class="nav-icon">💬</div>
+        <div class="nav-label">Messages</div>
+        <div class="nav-badge">2</div>
+      </div>
+      <div class="sidebar-section-title">Team</div>
+      <div class="nav-item" onclick="switchPage('team',this)">
+        <div class="nav-icon">👥</div>
+        <div class="nav-label">Team</div>
+      </div>
+      <div class="nav-item" onclick="switchPage('calendar',this)">
+        <div class="nav-icon">📅</div>
+        <div class="nav-label">Calendar</div>
+      </div>
+      <div class="sidebar-section-title">Account</div>
+      <div class="nav-item" onclick="switchPage('profile',this)">
+        <div class="nav-icon">👤</div>
+        <div class="nav-label">My Profile</div>
+      </div>
+      <div class="nav-item" onclick="switchPage('settings',this)">
+        <div class="nav-icon">⚙️</div>
+        <div class="nav-label">Settings</div>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="sidebar-footer-user">
+        <div class="avatar" id="userAvatar">?</div>
+        <div class="sidebar-footer-text">
+          <div class="sidebar-footer-name" id="userName">Loading…</div>
+          <div class="sidebar-footer-role" id="userRole">Team Member</div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="header">
+      <button class="header-toggle" onclick="toggleSidebar()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+      <div class="header-breadcrumb">
+        <span>My Workspace</span>
+        <span style="color:var(--text-3)">›</span>
+        <strong id="breadcrumb">Dashboard</strong>
+      </div>
+      <div class="header-search">
+        <svg width="14" height="14" fill="none" stroke="var(--text-3)" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" placeholder="Search…"/>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <div class="notif-dot"></div>
+        </button>
+        <div class="dropdown">
+          <div class="profile-btn" onclick="toggleDropdown()">
+            <div class="avatar avatar-sm" id="headerAvatar">?</div>
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+          <div class="dropdown-menu" id="profileDropdown">
+            <div class="dropdown-item" onclick="switchPage('profile',null)">👤 My Profile</div>
+            <div class="dropdown-item" onclick="switchPage('settings',null)">⚙️ Settings</div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item" onclick="signOut()" style="color:var(--danger)">🚪 Sign Out</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ========== DASHBOARD PAGE ========== -->
+      <div class="page active" id="page-dashboard">
+        <div class="welcome-banner">
+          <div>
+            <div class="welcome-title">Good day, <span id="welcomeName">there</span>! 👋</div>
+            <div class="welcome-sub">Here's what's happening in your workspace today</div>
+          </div>
+          <div class="welcome-emoji">🚀</div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-card-header">
+              <div class="stat-icon" style="background:var(--accent-soft)">✅</div>
+              <span class="stat-trend trend-up">+2 today</span>
+            </div>
+            <div class="stat-value">7</div>
+            <div class="stat-label">Tasks Completed</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-header">
+              <div class="stat-icon" style="background:var(--info-soft)">📁</div>
+              <span class="stat-trend trend-up">Active</span>
+            </div>
+            <div class="stat-value">3</div>
+            <div class="stat-label">Active Projects</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-header">
+              <div class="stat-icon" style="background:var(--warning-soft)">⏳</div>
+              <span class="stat-trend" style="background:var(--warning-soft);color:var(--warning)">Due soon</span>
+            </div>
+            <div class="stat-value">3</div>
+            <div class="stat-label">Pending Tasks</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-header">
+              <div class="stat-icon" style="background:var(--success-soft)">👥</div>
+              <span class="stat-trend trend-up">Online</span>
+            </div>
+            <div class="stat-value">5</div>
+            <div class="stat-label">Team Members</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <!-- ACTIVITY CHART -->
+          <div class="card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+              <div style="font-size:15px;font-weight:600">My Activity</div>
+              <span class="badge badge-accent">This Week</span>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="activityChart"></canvas>
+            </div>
+          </div>
+
+          <!-- RECENT TASKS -->
+          <div class="card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+              <div style="font-size:15px;font-weight:600">Today's Tasks</div>
+              <button class="btn btn-sm btn-secondary" onclick="switchPage('tasks',null)">View all</button>
+            </div>
+            <div id="todayTasks">
+              <div class="task-item"><div class="task-check done"></div><div class="task-text done">Review homepage wireframes</div><span class="badge badge-success">Done</span></div>
+              <div class="task-item"><div class="task-check" onclick="toggleTask(this)"></div><div class="task-text">Update client proposal deck</div><span class="badge badge-warning">Due today</span></div>
+              <div class="task-item"><div class="task-check" onclick="toggleTask(this)"></div><div class="task-text">Team standup at 10am</div><span class="badge badge-info">Meeting</span></div>
+              <div class="task-item"><div class="task-check" onclick="toggleTask(this)"></div><div class="task-text">Submit time report</div><span class="badge badge-gray">EOD</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <!-- MY PROJECTS -->
+          <div class="card" style="padding:0;overflow:hidden">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between">
+              <div style="font-size:15px;font-weight:600">My Projects</div>
+              <span class="badge badge-accent">3 active</span>
+            </div>
+            <div>
+              <div style="padding:14px 20px;border-bottom:1px solid var(--border-light)">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                  <div style="font-weight:500">Brand Redesign — Apex Co.</div>
+                  <span class="badge badge-accent">In Progress</span>
+                </div>
+                <div class="progress"><div class="progress-bar" style="width:68%"></div></div>
+                <div style="font-size:12px;color:var(--text-3);margin-top:5px">68% complete · Due Aug 15</div>
+              </div>
+              <div style="padding:14px 20px;border-bottom:1px solid var(--border-light)">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                  <div style="font-weight:500">Website Launch — TechFlow</div>
+                  <span class="badge badge-warning">Review</span>
+                </div>
+                <div class="progress"><div class="progress-bar progress-bar warning" style="width:45%;background:var(--warning)"></div></div>
+                <div style="font-size:12px;color:var(--text-3);margin-top:5px">45% complete · Due Jul 30</div>
+              </div>
+              <div style="padding:14px 20px">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                  <div style="font-weight:500">Social Campaign — Luxe</div>
+                  <span class="badge badge-success">On Track</span>
+                </div>
+                <div class="progress"><div class="progress-bar success" style="width:90%;background:var(--success)"></div></div>
+                <div style="font-size:12px;color:var(--text-3);margin-top:5px">90% complete · Due Jun 20</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ACTIVITY FEED -->
+          <div class="card">
+            <div style="font-size:15px;font-weight:600;margin-bottom:16px">Team Activity</div>
+            <div>
+              <div class="activity-item">
+                <div class="activity-dot" style="background:var(--success)"></div>
+                <div class="activity-text"><strong>Sarah J.</strong> completed the client brief for Apex Co.</div>
+                <div class="activity-time">2m ago</div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-dot" style="background:var(--accent)"></div>
+                <div class="activity-text"><strong>Marcus C.</strong> pushed new code to TechFlow repo</div>
+                <div class="activity-time">1h ago</div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-dot" style="background:var(--info)"></div>
+                <div class="activity-text"><strong>Admin</strong> assigned you 2 new tasks</div>
+                <div class="activity-time">3h ago</div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-dot" style="background:var(--warning)"></div>
+                <div class="activity-text"><strong>Aisha R.</strong> commented on the brand deck</div>
+                <div class="activity-time">5h ago</div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-dot" style="background:var(--success)"></div>
+                <div class="activity-text"><strong>You</strong> submitted the Q2 report</div>
+                <div class="activity-time">Yesterday</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== TASKS PAGE ========== -->
+      <div class="page" id="page-tasks">
+        <div class="page-header">
+          <div><div class="page-title">My Tasks</div><div class="page-subtitle">Track and manage your assigned work</div></div>
+          <div class="page-actions">
+            <button class="btn btn-primary" onclick="openNewTaskModal()">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              New Task
+            </button>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:4px">
+          <div class="tabs">
+            <div class="tab active" onclick="filterTasks('all',this)">All</div>
+            <div class="tab" onclick="filterTasks('pending',this)">Pending</div>
+            <div class="tab" onclick="filterTasks('in-progress',this)">In Progress</div>
+            <div class="tab" onclick="filterTasks('done',this)">Done</div>
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Task</th><th>Project</th><th>Priority</th><th>Due Date</th><th>Status</th><th></th></tr></thead>
+              <tbody id="tasksTableBody">
+                <tr><td><div style="display:flex;align-items:center;gap:8px"><div class="task-check" onclick="toggleTaskRow(this)"></div>Update client proposal deck</div></td><td style="color:var(--text-2)">TechFlow Website</td><td><span class="badge badge-danger badge-dot">High</span></td><td style="color:var(--text-2)">Jun 5</td><td><span class="badge badge-warning badge-dot">In Progress</span></td><td><button class="btn btn-sm btn-ghost">Edit</button></td></tr>
+                <tr><td><div style="display:flex;align-items:center;gap:8px"><div class="task-check" onclick="toggleTaskRow(this)"></div>Design homepage mockup</div></td><td style="color:var(--text-2)">Brand Redesign</td><td><span class="badge badge-accent badge-dot">Medium</span></td><td style="color:var(--text-2)">Jun 8</td><td><span class="badge badge-warning badge-dot">In Progress</span></td><td><button class="btn btn-sm btn-ghost">Edit</button></td></tr>
+                <tr><td><div style="display:flex;align-items:center;gap:8px"><div class="task-check" onclick="toggleTaskRow(this)"></div>Submit time report</div></td><td style="color:var(--text-2)">Internal</td><td><span class="badge badge-gray badge-dot">Low</span></td><td style="color:var(--text-2)">Jun 5</td><td><span class="badge badge-info badge-dot">Todo</span></td><td><button class="btn btn-sm btn-ghost">Edit</button></td></tr>
+                <tr><td><div style="display:flex;align-items:center;gap:8px"><div class="task-check done"></div><span style="text-decoration:line-through;color:var(--text-3)">Review homepage wireframes</span></div></td><td style="color:var(--text-3)">Brand Redesign</td><td><span class="badge badge-accent badge-dot">Medium</span></td><td style="color:var(--text-3)">Jun 3</td><td><span class="badge badge-success badge-dot">Done</span></td><td><button class="btn btn-sm btn-ghost">View</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== PROJECTS PAGE ========== -->
+      <div class="page" id="page-projects">
+        <div class="page-header">
+          <div><div class="page-title">Projects</div><div class="page-subtitle">All projects you're assigned to</div></div>
+        </div>
+        <div class="grid-3">
+          <div class="card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="font-weight:600;font-size:15px">Brand Redesign</div>
+              <span class="badge badge-accent badge-dot">Active</span>
+            </div>
+            <div style="font-size:13px;color:var(--text-2);margin-bottom:14px">Full brand identity refresh for Apex Co. including logo, guidelines, and assets.</div>
+            <div class="progress" style="margin-bottom:6px"><div class="progress-bar" style="width:68%"></div></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-3)"><span>68%</span><span>Due Aug 15</span></div>
+            <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex;gap:-4px"><div class="avatar avatar-sm">S</div><div class="avatar avatar-sm" style="margin-left:-6px">M</div><div class="avatar avatar-sm" style="margin-left:-6px">A</div></div>
+              <button class="btn btn-sm btn-secondary">Open</button>
+            </div>
+          </div>
+          <div class="card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="font-weight:600;font-size:15px">TechFlow Website</div>
+              <span class="badge badge-warning badge-dot">Review</span>
+            </div>
+            <div style="font-size:13px;color:var(--text-2);margin-bottom:14px">Complete website redesign and launch for TechFlow SaaS platform.</div>
+            <div class="progress" style="margin-bottom:6px"><div class="progress-bar" style="width:45%;background:var(--warning)"></div></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-3)"><span>45%</span><span>Due Jul 30</span></div>
+            <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex"><div class="avatar avatar-sm">M</div><div class="avatar avatar-sm" style="margin-left:-6px">T</div></div>
+              <button class="btn btn-sm btn-secondary">Open</button>
+            </div>
+          </div>
+          <div class="card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="font-weight:600;font-size:15px">Luxe Campaign</div>
+              <span class="badge badge-success badge-dot">On Track</span>
+            </div>
+            <div style="font-size:13px;color:var(--text-2);margin-bottom:14px">Multi-platform social media campaign for Luxe lifestyle brand.</div>
+            <div class="progress" style="margin-bottom:6px"><div class="progress-bar" style="width:90%;background:var(--success)"></div></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-3)"><span>90%</span><span>Due Jun 20</span></div>
+            <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex"><div class="avatar avatar-sm">A</div><div class="avatar avatar-sm" style="margin-left:-6px">S</div></div>
+              <button class="btn btn-sm btn-secondary">Open</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== MESSAGES PAGE ========== -->
+      <div class="page" id="page-messages">
+        <div class="page-header"><div><div class="page-title">Messages</div><div class="page-subtitle">Team communications</div></div></div>
+        <div class="card">
+          <div style="text-align:center;padding:40px;color:var(--text-3)">
+            <div style="font-size:40px;margin-bottom:12px">💬</div>
+            <div style="font-size:15px;font-weight:600;color:var(--text-2);margin-bottom:6px">Messages coming soon</div>
+            <div style="font-size:13px">Team messaging will be available once your Supabase Realtime is configured</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== TEAM PAGE ========== -->
+      <div class="page" id="page-team">
+        <div class="page-header"><div><div class="page-title">Team</div><div class="page-subtitle">Your colleagues</div></div></div>
+        <div class="grid-3">
+          <div class="card" style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:24px">
+            <div class="avatar" style="width:48px;height:48px;font-size:18px">S</div>
+            <div style="font-weight:600">Sarah Johnson</div>
+            <span class="badge badge-accent">Manager</span>
+            <div style="font-size:12px;color:var(--text-3)">sarah@agency.com</div>
+            <div style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--success)"><div style="width:6px;height:6px;border-radius:50%;background:var(--success)"></div>Online</div>
+          </div>
+          <div class="card" style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:24px">
+            <div class="avatar" style="width:48px;height:48px;font-size:18px;background:linear-gradient(135deg,var(--info),#1d4ed8)">M</div>
+            <div style="font-weight:600">Marcus Chen</div>
+            <span class="badge badge-info">Developer</span>
+            <div style="font-size:12px;color:var(--text-3)">marcus@agency.com</div>
+            <div style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--success)"><div style="width:6px;height:6px;border-radius:50%;background:var(--success)"></div>Online</div>
+          </div>
+          <div class="card" style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:24px">
+            <div class="avatar" style="width:48px;height:48px;font-size:18px;background:linear-gradient(135deg,var(--warning),#d97706)">A</div>
+            <div style="font-weight:600">Aisha Rivera</div>
+            <span class="badge badge-warning">Designer</span>
+            <div style="font-size:12px;color:var(--text-3)">aisha@agency.com</div>
+            <div style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-3)"><div style="width:6px;height:6px;border-radius:50%;background:var(--text-3)"></div>Away</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== CALENDAR PAGE ========== -->
+      <div class="page" id="page-calendar">
+        <div class="page-header"><div><div class="page-title">Calendar</div><div class="page-subtitle">Your schedule</div></div></div>
+        <div class="card">
+          <div style="text-align:center;padding:40px;color:var(--text-3)">
+            <div style="font-size:40px;margin-bottom:12px">📅</div>
+            <div style="font-size:15px;font-weight:600;color:var(--text-2);margin-bottom:6px">Calendar coming soon</div>
+            <div style="font-size:13px">Integrated calendar view will be available in the next update</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== PROFILE PAGE ========== -->
+      <div class="page" id="page-profile">
+        <div class="page-header"><div><div class="page-title">My Profile</div><div class="page-subtitle">Your personal information</div></div></div>
+        <div class="grid-2">
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
+              <div class="avatar" style="width:64px;height:64px;font-size:24px" id="profileAvatarLg">?</div>
+              <div>
+                <div style="font-size:18px;font-weight:700" id="profileName">Loading…</div>
+                <div style="font-size:13px;color:var(--text-2)" id="profileEmail">—</div>
+                <div style="margin-top:6px"><span class="badge badge-accent" id="profileRole">Team Member</span></div>
+              </div>
+            </div>
+            <div class="form-group"><label class="form-label">First Name</label><input type="text" class="form-control" id="pfFirst" placeholder="First name"/></div>
+            <div class="form-group"><label class="form-label">Last Name</label><input type="text" class="form-control" id="pfLast" placeholder="Last name"/></div>
+            <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-control" id="pfEmail" placeholder="Email" readonly style="opacity:.7"/></div>
+            <div class="form-group"><label class="form-label">Bio</label><textarea class="form-control" id="pfBio" placeholder="Tell the team about yourself…" rows="3"></textarea></div>
+            <button class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
+          </div>
+          <div class="card">
+            <div style="font-size:15px;font-weight:600;margin-bottom:16px">Change Password</div>
+            <div class="form-group"><label class="form-label">Current Password</label><input type="password" class="form-control" placeholder="••••••••"/></div>
+            <div class="form-group"><label class="form-label">New Password</label><input type="password" class="form-control" placeholder="••••••••"/></div>
+            <div class="form-group"><label class="form-label">Confirm New Password</label><input type="password" class="form-control" placeholder="••••••••"/></div>
+            <button class="btn btn-secondary">Update Password</button>
+            <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border-light)">
+              <div style="font-size:15px;font-weight:600;margin-bottom:12px;color:var(--danger)">Danger Zone</div>
+              <button class="btn" style="background:var(--danger-soft);color:var(--danger);border:1px solid transparent" onclick="signOut()">Sign Out of All Devices</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== SETTINGS PAGE ========== -->
+      <div class="page" id="page-settings">
+        <div class="page-header"><div><div class="page-title">Settings</div><div class="page-subtitle">Customize your experience</div></div></div>
+        <div class="card">
+          <div style="font-size:15px;font-weight:600;margin-bottom:16px">Notifications</div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div><div style="font-weight:500;font-size:13px">Task assignments</div><div style="font-size:12px;color:var(--text-3)">Get notified when tasks are assigned to you</div></div>
+              <div onclick="toggleSwitch(this)" style="width:38px;height:22px;border-radius:20px;background:var(--accent);cursor:pointer;position:relative;transition:background .2s"><div style="position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:all .2s"></div></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div><div style="font-weight:500;font-size:13px">Project updates</div><div style="font-size:12px;color:var(--text-3)">Notify on project status changes</div></div>
+              <div onclick="toggleSwitch(this)" style="width:38px;height:22px;border-radius:20px;background:var(--accent);cursor:pointer;position:relative;transition:background .2s"><div style="position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:all .2s"></div></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div><div style="font-weight:500;font-size:13px">Team messages</div><div style="font-size:12px;color:var(--text-3)">Direct messages from teammates</div></div>
+              <div onclick="toggleSwitch(this)" style="width:38px;height:22px;border-radius:20px;background:var(--bg-hover);cursor:pointer;position:relative;transition:background .2s"><div style="position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:all .2s"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end content -->
+  </div>
+</div>
+
+<!-- NEW TASK MODAL -->
+<div class="modal-overlay" id="newTaskModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">New Task</div><button class="icon-btn" onclick="closeNewTaskModal()"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Task Name</label><input type="text" class="form-control" id="newTaskName" placeholder="What needs to be done?"/></div>
+      <div class="form-group"><label class="form-label">Project</label>
+        <select class="form-control" id="newTaskProject">
+          <option>Brand Redesign</option><option>TechFlow Website</option><option>Luxe Campaign</option><option>Internal</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label class="form-label">Priority</label>
+          <select class="form-control" id="newTaskPriority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Due Date</label><input type="date" class="form-control" id="newTaskDue"/></div>
+      </div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea class="form-control" rows="3" placeholder="Optional details…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeNewTaskModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="addTask()">Add Task</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// SUPABASE CONFIG — same values as team-manage.html
+// ============================================================
+const SUPABASE_URL = 'https://jcykegsgqvxtngxtmnmv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjeWtlZ3NncXZ4dG5neHRtbm12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NTcxNjIsImV4cCI6MjA5NjAzMzE2Mn0.rsBiwmBZHh1yWR7e5To2jk0-0u9Ef6LDX7NxMHX3t7M';
+// ============================================================
+
+let sb = null;
+
+async function init() {
+  // Check dashboard mode from URL
+  const params = new URLSearchParams(window.location.search);
+  const mode = params.get('mode') || 'personal';
+
+  if (mode === 'shared') {
+    // Shared mode — redirect to admin CRM
+    window.location.href = 'index.html';
+    return;
+  }
+
+  // Personal mode — show personal dashboard
+  if (SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) { window.location.href = 'team-signup.html'; return; }
+      const user = session.user;
+      const name = user.user_metadata?.first_name || user.email.split('@')[0];
+      const role = user.user_metadata?.role || 'Team Member';
+      const initials = name[0].toUpperCase();
+      setUserInfo(name, role, initials, user.email);
+    } catch(e) { console.error(e); }
+  } else {
+    setUserInfo('Team Member', 'Designer', 'T', 'member@agency.com');
+  }
+  buildChart();
+}
+
+function setUserInfo(name, role, initials, email) {
+  document.getElementById('userAvatar').textContent = initials;
+  document.getElementById('headerAvatar').textContent = initials;
+  document.getElementById('userName').textContent = name;
+  document.getElementById('userRole').textContent = role;
+  document.getElementById('welcomeName').textContent = name.split(' ')[0];
+  document.getElementById('profileAvatarLg').textContent = initials;
+  document.getElementById('profileName').textContent = name;
+  document.getElementById('profileEmail').textContent = email || '—';
+  document.getElementById('profileRole').textContent = role;
+  if (document.getElementById('pfFirst')) document.getElementById('pfFirst').value = name.split(' ')[0]||'';
+  if (document.getElementById('pfLast')) document.getElementById('pfLast').value = name.split(' ')[1]||'';
+  if (document.getElementById('pfEmail')) document.getElementById('pfEmail').value = email||'';
+}
+
+function buildChart() {
+  const ctx = document.getElementById('activityChart')?.getContext('2d');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+      datasets: [{
+        label: 'Tasks Done',
+        data: [3,5,2,7,4,1,2],
+        backgroundColor: 'rgba(139,92,246,.6)',
+        borderColor: '#8b5cf6',
+        borderWidth: 1,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,.04)' }, ticks: { color: '#8888a0' } },
+        y: { grid: { color: 'rgba(255,255,255,.04)' }, ticks: { color: '#8888a0', stepSize: 2 } }
+      }
+    }
+  });
+}
+
+function switchPage(id, navEl) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+id)?.classList.add('active');
+  if (navEl) navEl.classList.add('active');
+  document.getElementById('breadcrumb').textContent = id.charAt(0).toUpperCase()+id.slice(1);
+  closeDropdown();
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('collapsed');
+}
+
+function toggleTask(el) {
+  el.classList.toggle('done');
+  const text = el.nextElementSibling;
+  if (text) text.classList.toggle('done');
+}
+
+function toggleTaskRow(el) {
+  el.classList.toggle('done');
+  const text = el.parentElement.nextElementSibling;
+  if (text) { text.style.textDecoration = el.classList.contains('done') ? 'line-through' : 'none'; text.style.color = el.classList.contains('done') ? 'var(--text-3)' : ''; }
+  const badge = text?.parentElement?.nextElementSibling?.nextElementSibling?.nextElementSibling;
+  if (badge && el.classList.contains('done')) badge.className = 'badge badge-success badge-dot';
+}
+
+function filterTasks(filter, tabEl) {
+  document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
+  if (tabEl) tabEl.classList.add('active');
+}
+
+function openNewTaskModal() { document.getElementById('newTaskModal').classList.add('open'); }
+function closeNewTaskModal() { document.getElementById('newTaskModal').classList.remove('open'); }
+
+function addTask() {
+  const name = document.getElementById('newTaskName').value.trim();
+  const project = document.getElementById('newTaskProject').value;
+  const priority = document.getElementById('newTaskPriority').value;
+  const due = document.getElementById('newTaskDue').value;
+  if (!name) { showToast('Enter a task name', 'error'); return; }
+  const pBadge = {high:'badge-danger',medium:'badge-accent',low:'badge-gray'}[priority]||'badge-gray';
+  const dueStr = due ? new Date(due).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+  const tbody = document.getElementById('tasksTableBody');
+  const row = document.createElement('tr');
+  row.innerHTML = `<td><div style="display:flex;align-items:center;gap:8px"><div class="task-check" onclick="toggleTaskRow(this)"></div>${name}</div></td><td style="color:var(--text-2)">${project}</td><td><span class="badge ${pBadge} badge-dot">${priority.charAt(0).toUpperCase()+priority.slice(1)}</span></td><td style="color:var(--text-2)">${dueStr}</td><td><span class="badge badge-info badge-dot">Todo</span></td><td><button class="btn btn-sm btn-ghost">Edit</button></td>`;
+  tbody.insertBefore(row, tbody.firstChild);
+  closeNewTaskModal();
+  showToast('Task added', 'success');
+}
+
+function saveProfile() { showToast('Profile saved', 'success'); }
+
+function toggleSwitch(el) {
+  const on = el.style.background === 'var(--accent)' || el.style.background.includes('139');
+  el.style.background = on ? 'var(--bg-hover)' : 'var(--accent)';
+  const dot = el.firstElementChild;
+  dot.style.left = on ? '3px' : ''; dot.style.right = on ? '' : '3px';
+}
+
+function toggleDropdown() { document.getElementById('profileDropdown').classList.toggle('open'); }
+function closeDropdown() { document.getElementById('profileDropdown').classList.remove('open'); }
+document.addEventListener('click', e => { if (!e.target.closest('.dropdown')) closeDropdown(); });
+
+async function signOut() {
+  if (sb) { await sb.auth.signOut(); }
+  window.location.href = 'team-signup.html';
+}
+
+let tt;
+function showToast(msg, type='') {
+  const t = document.getElementById('toast'); t.textContent = msg;
+  t.className = `toast show ${type}`; clearTimeout(tt); tt = setTimeout(() => t.className = 'toast', 3000);
+}
+
+document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); }));
+init();
+</script>
+</body>
+</html>

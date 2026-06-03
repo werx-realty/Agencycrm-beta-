@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AgencyOS — Team Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg-base:#0f0f11;--bg-card:#1a1a1e;--bg-elevated:#222227;--bg-hover:#2a2a30;--bg-input:#1f1f24;
+  --border:#32323a;--border-light:#28282f;--text-1:#ffffff;--text-2:#c8c8d8;--text-3:#8888a0;
+  --accent:#8b5cf6;--accent-rgb:139,92,246;--accent-soft:rgba(139,92,246,.12);--accent-glow:rgba(139,92,246,.25);
+  --success:#22c55e;--success-soft:rgba(34,197,94,.12);--warning:#f59e0b;--warning-soft:rgba(245,158,11,.12);
+  --danger:#ef4444;--danger-soft:rgba(239,68,68,.12);--info:#3b82f6;--info-soft:rgba(59,130,246,.12);
+  --sidebar-w:240px;--header-h:60px;--radius:12px;--radius-sm:8px;--radius-lg:16px;
+  --shadow:0 4px 24px rgba(0,0,0,.4);--shadow-sm:0 2px 8px rgba(0,0,0,.3);--transition:.18s cubic-bezier(.4,0,.2,1);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+html,body{height:100%;overflow:hidden;background:var(--bg-base);color:var(--text-1);font-family:'Inter',sans-serif;font-size:14px}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+#app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);height:100vh;background:var(--bg-card);border-right:1px solid var(--border-light);display:flex;flex-direction:column;z-index:100}
+.sidebar-logo{display:flex;align-items:center;gap:10px;padding:18px 16px;border-bottom:1px solid var(--border-light)}
+.sidebar-logo-icon{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;box-shadow:0 0 16px var(--accent-glow)}
+.sidebar-logo-text{font-size:16px;font-weight:700;letter-spacing:-.3px}.sidebar-logo-text span{color:var(--accent)}
+.sidebar-nav{flex:1;overflow-y:auto;padding:12px 8px;display:flex;flex-direction:column;gap:2px}
+.sidebar-section-title{font-size:10px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--text-3);padding:12px 8px 4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition);color:var(--text-2);text-decoration:none;position:relative}
+.nav-item:hover{background:var(--bg-hover);color:var(--text-1)}
+.nav-item.active{background:var(--accent-soft);color:var(--accent)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:18px;background:var(--accent);border-radius:0 3px 3px 0}
+.nav-icon{width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px}
+.nav-label{font-size:13px;font-weight:500;white-space:nowrap;flex:1}
+.sidebar-footer{padding:12px 8px;border-top:1px solid var(--border-light)}
+.sidebar-footer-user{display:flex;align-items:center;gap:10px;padding:8px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition)}
+.sidebar-footer-user:hover{background:var(--bg-hover)}
+.avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#7c3aed);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;color:#fff}
+.sidebar-footer-name{font-size:13px;font-weight:600}.sidebar-footer-role{font-size:11px;color:var(--text-3)}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.header{height:var(--header-h);min-height:var(--header-h);background:var(--bg-card);border-bottom:1px solid var(--border-light);display:flex;align-items:center;padding:0 20px;gap:12px;z-index:50}
+.header-breadcrumb{flex:1;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-2)}
+.header-breadcrumb strong{color:var(--text-1);font-weight:600}
+.header-actions{display:flex;align-items:center;gap:6px}
+.icon-btn{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);cursor:pointer;color:var(--text-2);transition:all var(--transition);border:none;background:none}
+.icon-btn:hover{background:var(--bg-hover);color:var(--text-1)}
+.content{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:20px}
+.page-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.page-title{font-size:22px;font-weight:700;letter-spacing:-.4px}
+.page-subtitle{font-size:13px;color:var(--text-2);margin-top:2px}
+.card{background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius);padding:20px;transition:all var(--transition)}
+.card:hover{border-color:var(--border)}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.stat-card{background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:20px 22px;display:flex;flex-direction:column;gap:12px;transition:all var(--transition)}
+.stat-card:hover{border-color:var(--border);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.stat-icon{width:44px;height:44px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:20px}
+.stat-value{font-size:28px;font-weight:800;letter-spacing:-.8px;line-height:1}
+.stat-label{font-size:13px;color:var(--text-2);font-weight:500}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all var(--transition);font-family:inherit;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#7c3aed;box-shadow:0 0 16px var(--accent-glow)}
+.btn-secondary{background:var(--bg-elevated);color:var(--text-1);border:1px solid var(--border)}.btn-secondary:hover{background:var(--bg-hover)}
+.btn-ghost{background:none;color:var(--text-2);border:1px solid transparent}.btn-ghost:hover{background:var(--bg-hover);color:var(--text-1)}
+.btn-danger{background:var(--danger-soft);color:var(--danger);border:1px solid transparent}.btn-danger:hover{background:var(--danger);color:#fff}
+.btn-sm{padding:5px 10px;font-size:12px}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.badge-accent{background:var(--accent-soft);color:var(--accent)}.badge-success{background:var(--success-soft);color:var(--success)}
+.badge-warning{background:var(--warning-soft);color:var(--warning)}.badge-danger{background:var(--danger-soft);color:var(--danger)}
+.badge-info{background:var(--info-soft);color:var(--info)}.badge-gray{background:var(--bg-hover);color:var(--text-2)}
+.badge-dot::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}
+.table-wrap{overflow-x:auto;border-radius:var(--radius)}
+table{width:100%;border-collapse:collapse}
+thead th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3);border-bottom:1px solid var(--border-light);white-space:nowrap}
+tbody td{padding:12px 14px;border-bottom:1px solid var(--border-light);font-size:13px;vertical-align:middle}
+tbody tr{transition:background var(--transition);cursor:default}tbody tr:hover{background:var(--bg-hover)}
+tbody tr:last-child td{border-bottom:none}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex;animation:fadeIn .15s ease}
+.modal{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.6)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border-light)}
+.modal-title{font-size:16px;font-weight:700}
+.modal-body{padding:24px}.modal-footer{padding:16px 24px;border-top:1px solid var(--border-light);display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.form-label{font-size:12px;font-weight:600;color:var(--text-2);letter-spacing:.2px}
+.form-control{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text-1);font-size:13px;font-family:inherit;transition:all var(--transition);outline:none;width:100%}
+.form-control:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}.form-control::placeholder{color:var(--text-3)}
+select.form-control option{background:var(--bg-elevated)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.search-bar{display:flex;align-items:center;gap:8px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;transition:all var(--transition)}
+.search-bar:focus-within{border-color:var(--accent)}
+.search-bar input{background:none;border:none;outline:none;color:var(--text-1);font-size:13px;width:100%;font-family:inherit}
+.invite-box{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;display:flex;align-items:center;gap:10px}
+.invite-link-text{flex:1;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:var(--text-1);box-shadow:var(--shadow);z-index:2000;display:flex;align-items:center;gap:8px;transform:translateY(80px);opacity:0;transition:all .3s ease;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}.toast.success{border-color:var(--success);color:var(--success)}.toast.error{border-color:var(--danger);color:var(--danger)}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:12px;color:var(--text-3)}
+.empty-state-icon{font-size:48px;opacity:.4}.empty-state-title{font-size:15px;font-weight:600;color:var(--text-2)}.empty-state-sub{font-size:13px;text-align:center;max-width:280px}
+.member-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#7c3aed);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+</style>
+</head>
+<body>
+<div id="app">
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">⚡</div>
+      <div class="sidebar-logo-text">Agency<span>OS</span></div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="sidebar-section-title">Main</div>
+      <a href="index.html" class="nav-item"><div class="nav-icon">📊</div><div class="nav-label">Dashboard</div></a>
+      <a href="index.html" class="nav-item"><div class="nav-icon">👥</div><div class="nav-label">Clients</div></a>
+      <a href="index.html" class="nav-item"><div class="nav-icon">📁</div><div class="nav-label">Projects</div></a>
+      <a href="index.html" class="nav-item"><div class="nav-icon">✅</div><div class="nav-label">Tasks</div></a>
+      <div class="sidebar-section-title">Finance</div>
+      <a href="index.html" class="nav-item"><div class="nav-icon">💳</div><div class="nav-label">Invoices</div></a>
+      <a href="index.html" class="nav-item"><div class="nav-icon">📈</div><div class="nav-label">Revenue</div></a>
+      <div class="sidebar-section-title">Admin</div>
+      <a href="team-manage.html" class="nav-item active"><div class="nav-icon">🏢</div><div class="nav-label">Team Members</div></a>
+      <a href="index.html" class="nav-item"><div class="nav-icon">⚙️</div><div class="nav-label">Settings</div></a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="sidebar-footer-user">
+        <div class="avatar" id="adminAvatar">A</div>
+        <div><div class="sidebar-footer-name" id="adminName">Admin</div><div class="sidebar-footer-role">Administrator</div></div>
+      </div>
+    </div>
+  </nav>
+  <div class="main">
+    <div class="header">
+      <div class="header-breadcrumb"><span>Admin</span><span style="color:var(--text-3)">›</span><strong>Team Members</strong></div>
+      <div class="header-actions">
+        <button class="btn btn-primary" onclick="openInviteModal()">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          Invite Member
+        </button>
+        <a href="index.html" class="icon-btn" title="Back to CRM">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9M5 10v10h5v-6h4v6h5V10"/></svg>
+        </a>
+      </div>
+    </div>
+    <div class="content">
+      <div class="page-header">
+        <div><div class="page-title">Team Members</div><div class="page-subtitle">Invite members and manage their portal access</div></div>
+      </div>
+      <div id="configWarning" class="card" style="border-color:var(--warning);background:var(--warning-soft);display:none">
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <span style="font-size:20px">⚠️</span>
+          <div>
+            <div style="font-weight:600;color:var(--warning);margin-bottom:4px">Supabase not configured</div>
+            <div style="color:var(--text-2);font-size:13px">Open this file and set your <code style="background:var(--bg-elevated);padding:1px 5px;border-radius:4px;font-family:monospace">SUPABASE_URL</code> and <code style="background:var(--bg-elevated);padding:1px 5px;border-radius:4px;font-family:monospace">SUPABASE_ANON_KEY</code> in the script section. Find them in your Supabase project under <strong>Settings → API</strong>. Running in demo mode.</div>
+          </div>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-icon" style="background:var(--accent-soft)">👥</div><div class="stat-value" id="statTotal">—</div><div class="stat-label">Total Members</div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:var(--success-soft)">✅</div><div class="stat-value" id="statActive">—</div><div class="stat-label">Active</div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:var(--warning-soft)">⏳</div><div class="stat-value" id="statPending">—</div><div class="stat-label">Pending Invite</div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:var(--info-soft)">🛡️</div><div class="stat-value" id="statRoles">—</div><div class="stat-label">Roles Used</div></div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border-light)">
+          <div style="font-size:15px;font-weight:600">Active Members</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="search-bar" style="width:200px">
+              <svg width="14" height="14" fill="none" stroke="var(--text-3)" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="text" placeholder="Search members…" id="searchInput" oninput="filterMembers()"/>
+            </div>
+            <select class="form-control" id="roleFilter" onchange="filterMembers()" style="width:130px;padding:7px 10px">
+              <option value="">All Roles</option>
+              <option value="admin">Admin</option>
+              <option value="manager">Manager</option>
+              <option value="designer">Designer</option>
+              <option value="developer">Developer</option>
+              <option value="sales">Sales</option>
+              <option value="support">Support</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Member</th><th>Role</th><th>Status</th><th>Joined</th><th>Dashboard</th><th></th></tr></thead>
+            <tbody id="membersTableBody"><tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">👥</div><div class="empty-state-title">No members yet</div><div class="empty-state-sub">Invite your first team member</div></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border-light)">
+          <div style="font-size:15px;font-weight:600">Pending Invites</div>
+          <span class="badge badge-warning badge-dot" id="pendingCount">0 pending</span>
+        </div>
+        <div id="pendingList"><div style="padding:24px;text-align:center;color:var(--text-3);font-size:13px">No pending invites</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INVITE MODAL -->
+<div class="modal-overlay" id="inviteModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Invite Team Member</div><button class="icon-btn" onclick="closeInviteModal()"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">First Name</label><input type="text" class="form-control" id="inviteFirst" placeholder="Jane"/></div>
+        <div class="form-group"><label class="form-label">Last Name</label><input type="text" class="form-control" id="inviteLast" placeholder="Smith"/></div>
+      </div>
+      <div class="form-group"><label class="form-label">Email Address</label><input type="email" class="form-control" id="inviteEmail" placeholder="jane@company.com"/></div>
+      <div class="form-group"><label class="form-label">Role</label>
+        <select class="form-control" id="inviteRole">
+          <option value="manager">Manager</option><option value="designer">Designer</option><option value="developer">Developer</option><option value="sales">Sales</option><option value="support">Support</option><option value="admin">Admin</option>
+        </select>
+      </div>
+      <div style="padding:14px;background:var(--bg-elevated);border-radius:var(--radius-sm);font-size:12px;color:var(--text-2)">📧 An invite email will be sent. They'll click the link to create their account and access their personal dashboard.</div>
+      <div id="inviteLinkSection" style="display:none;margin-top:16px">
+        <div class="form-label" style="margin-bottom:6px">Invite Link (share manually if needed)</div>
+        <div class="invite-box"><div class="invite-link-text" id="inviteLinkText">—</div><button class="btn btn-sm btn-secondary" onclick="copyInviteLink()">Copy</button></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeInviteModal()">Cancel</button>
+      <button class="btn btn-primary" id="sendInviteBtn" onclick="sendInvite()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2 15 22l-4-9-9-4 20-7z"/></svg>
+        Send Invite
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- REMOVE CONFIRM MODAL -->
+<div class="modal-overlay" id="revokeModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header"><div class="modal-title">Remove Member</div><button class="icon-btn" onclick="closeRevokeModal()"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="modal-body"><p style="color:var(--text-2);font-size:13px;line-height:1.6">Are you sure you want to remove <strong id="removeMemberName" style="color:var(--text-1)"></strong>? They will lose dashboard access immediately.</p></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeRevokeModal()">Cancel</button>
+      <button class="btn btn-danger" id="confirmRemoveBtn" onclick="confirmRemove()">Remove Member</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// SUPABASE CONFIG — replace with your project values
+// Supabase Dashboard → Project → Settings → API
+// ============================================================
+const SUPABASE_URL = 'https://jcykegsgqvxtngxtmnmv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjeWtlZ3NncXZ4dG5neHRtbm12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NTcxNjIsImV4cCI6MjA5NjAzMzE2Mn0.rsBiwmBZHh1yWR7e5To2jk0-0u9Ef6LDX7NxMHX3t7M';
+// ============================================================
+
+let sb = null, allMembers = [], memberToRemove = null;
+
+async function init() {
+  if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+    document.getElementById('configWarning').style.display = 'block';
+    loadDemo(); return;
+  }
+  try {
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.href = 'index.html'; return; }
+    document.getElementById('adminAvatar').textContent = (session.user.email||'A')[0].toUpperCase();
+    document.getElementById('adminName').textContent = session.user.email.split('@')[0];
+    await loadMembers();
+  } catch(e) { document.getElementById('configWarning').style.display='block'; loadDemo(); }
+}
+
+async function loadMembers() {
+  if (!sb) return;
+  try {
+    const { data, error } = await sb.from('team_members').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    allMembers = data || [];
+    render();
+  } catch(e) { showToast('Table not found — run Supabase SQL setup first', 'error'); loadDemo(); }
+}
+
+function loadDemo() {
+  allMembers = [
+    { id:1, first_name:'Sarah', last_name:'Johnson', email:'sarah@agency.com', role:'manager', status:'active', created_at:'2024-01-15' },
+    { id:2, first_name:'Marcus', last_name:'Chen', email:'marcus@agency.com', role:'developer', status:'active', created_at:'2024-02-20' },
+    { id:3, first_name:'Aisha', last_name:'Rivera', email:'aisha@agency.com', role:'designer', status:'active', created_at:'2024-03-10' },
+    { id:4, first_name:'Tyler', last_name:'Brooks', email:'tyler@agency.com', role:'sales', status:'pending', created_at:'2024-06-01' },
+  ];
+  render();
+}
+
+function render() {
+  const active = allMembers.filter(m => m.status !== 'pending');
+  const pending = allMembers.filter(m => m.status === 'pending');
+  document.getElementById('statTotal').textContent = allMembers.length;
+  document.getElementById('statActive').textContent = active.length;
+  document.getElementById('statPending').textContent = pending.length;
+  document.getElementById('statRoles').textContent = [...new Set(allMembers.map(m=>m.role))].length;
+
+  const tbody = document.getElementById('membersTableBody');
+  if (!active.length) { tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">👥</div><div class="empty-state-title">No active members</div><div class="empty-state-sub">Invite your first team member</div></div></td></tr>`; }
+  else tbody.innerHTML = active.map(m => {
+    const ini = ((m.first_name||'?')[0]+(m.last_name||'?')[0]).toUpperCase();
+    const joined = m.created_at ? new Date(m.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:10px"><div class="member-avatar">${ini}</div><div><div style="font-weight:500">${m.first_name} ${m.last_name}</div><div style="color:var(--text-3);font-size:12px">${m.email}</div></div></div></td>
+      <td><span class="badge ${roleColor(m.role)}">${cap(m.role)}</span></td>
+      <td><span class="badge badge-success badge-dot">Active</span></td>
+      <td style="color:var(--text-2)">${joined}</td>
+      <td><a href="team-dashboard.html?member=${m.id}" class="btn btn-sm btn-secondary" style="text-decoration:none">View Dashboard</a></td>
+      <td><button class="btn btn-sm btn-danger" onclick="openRevokeModal(${m.id},'${m.first_name} ${m.last_name}')">Remove</button></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('pendingCount').textContent = `${pending.length} pending`;
+  const pl = document.getElementById('pendingList');
+  if (!pending.length) { pl.innerHTML=`<div style="padding:24px;text-align:center;color:var(--text-3);font-size:13px">No pending invites</div>`; return; }
+  pl.innerHTML = pending.map(m => {
+    const sent = m.created_at ? new Date(m.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border-light)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--warning)"></div>
+        <div><div style="font-weight:500;font-size:13px">${m.email}</div><div style="color:var(--text-3);font-size:12px">Invited ${sent} · ${cap(m.role)}</div></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm btn-secondary" onclick="resendInvite('${m.email}')">Resend</button>
+        <button class="btn btn-sm btn-danger" onclick="openRevokeModal(${m.id},'${m.email}')">Cancel</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterMembers() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const role = document.getElementById('roleFilter').value;
+  const f = allMembers.filter(m => {
+    const name = `${m.first_name} ${m.last_name} ${m.email}`.toLowerCase();
+    return (!q||name.includes(q)) && (!role||m.role===role);
+  });
+  const tbody = document.getElementById('membersTableBody');
+  const active = f.filter(m=>m.status!=='pending');
+  if (!active.length) { tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-title">No results</div></div></td></tr>`; return; }
+  tbody.innerHTML = active.map(m => {
+    const ini = ((m.first_name||'?')[0]+(m.last_name||'?')[0]).toUpperCase();
+    const joined = m.created_at ? new Date(m.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+    return `<tr><td><div style="display:flex;align-items:center;gap:10px"><div class="member-avatar">${ini}</div><div><div style="font-weight:500">${m.first_name} ${m.last_name}</div><div style="color:var(--text-3);font-size:12px">${m.email}</div></div></div></td><td><span class="badge ${roleColor(m.role)}">${cap(m.role)}</span></td><td><span class="badge badge-success badge-dot">Active</span></td><td style="color:var(--text-2)">${joined}</td><td><a href="team-dashboard.html?member=${m.id}" class="btn btn-sm btn-secondary" style="text-decoration:none">View Dashboard</a></td><td><button class="btn btn-sm btn-danger" onclick="openRevokeModal(${m.id},'${m.first_name} ${m.last_name}')">Remove</button></td></tr>`;
+  }).join('');
+}
+
+async function sendInvite() {
+  const first=document.getElementById('inviteFirst').value.trim();
+  const last=document.getElementById('inviteLast').value.trim();
+  const email=document.getElementById('inviteEmail').value.trim();
+  const role=document.getElementById('inviteRole').value;
+  if (!first||!email){showToast('First name and email required','error');return;}
+  const btn=document.getElementById('sendInviteBtn');
+  btn.innerHTML='<div class="spinner"></div> Sending…';btn.disabled=true;
+  try {
+    const signupUrl='https://small-crm-h45u.vercel.app'+'/team-signup.html';
+    const fallbackLink=`${'https://small-crm-h45u.vercel.app'}/team-signup.html?invite=${btoa(email+'|'+role+'|'+first+'|'+last)}`;
+    if (sb) {
+      const {error:dbErr}=await sb.from('team_members').insert({first_name:first,last_name:last,email,role,status:'pending'});
+      if(dbErr)throw dbErr;
+      try {
+        await sb.auth.admin.inviteUserByEmail(email,{redirectTo:signupUrl,data:{first_name:first,last_name:last,role}});
+      } catch(e){ /* admin invite may require service key — show manual link */ }
+      await loadMembers();
+    } else {
+      allMembers.unshift({id:Date.now(),first_name:first,last_name:last,email,role,status:'pending',created_at:new Date().toISOString()});
+      render();
+    }
+    document.getElementById('inviteLinkText').textContent=fallbackLink;
+    document.getElementById('inviteLinkSection').style.display='block';
+    showToast(`Invite sent to ${email}`,'success');
+  } catch(e){showToast(e.message||'Failed to send invite','error');}
+  finally{btn.innerHTML='<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2 15 22l-4-9-9-4 20-7z"/></svg> Send Invite';btn.disabled=false;}
+}
+
+async function resendInvite(email) {
+  if(!sb){showToast('Connect Supabase to resend','error');return;}
+  try{
+    const signupUrl='https://small-crm-h45u.vercel.app'+'/team-signup.html';
+    await sb.auth.admin.inviteUserByEmail(email,{redirectTo:signupUrl});
+    showToast(`Invite resent to ${email}`,'success');
+  }catch(e){showToast(e.message,'error');}
+}
+
+function openInviteModal(){
+  ['inviteFirst','inviteLast','inviteEmail'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('inviteRole').value='manager';
+  document.getElementById('inviteLinkSection').style.display='none';
+  document.getElementById('inviteModal').classList.add('open');
+}
+function closeInviteModal(){document.getElementById('inviteModal').classList.remove('open');}
+function openRevokeModal(id,name){memberToRemove=id;document.getElementById('removeMemberName').textContent=name;document.getElementById('revokeModal').classList.add('open');}
+function closeRevokeModal(){document.getElementById('revokeModal').classList.remove('open');memberToRemove=null;}
+
+async function confirmRemove(){
+  if(!memberToRemove)return;
+  const btn=document.getElementById('confirmRemoveBtn');btn.textContent='Removing…';btn.disabled=true;
+  try{
+    if(sb){const{error}=await sb.from('team_members').delete().eq('id',memberToRemove);if(error)throw error;await loadMembers();}
+    else{allMembers=allMembers.filter(m=>m.id!==memberToRemove);render();}
+    showToast('Member removed','success');closeRevokeModal();
+  }catch(e){showToast(e.message,'error');}
+  finally{btn.textContent='Remove Member';btn.disabled=false;}
+}
+
+function copyInviteLink(){navigator.clipboard.writeText(document.getElementById('inviteLinkText').textContent).then(()=>showToast('Link copied','success'));}
+function roleColor(r){return{admin:'badge-danger',manager:'badge-accent',developer:'badge-info',designer:'badge-warning',sales:'badge-success',support:'badge-gray'}[r]||'badge-gray';}
+function cap(s){return s?s[0].toUpperCase()+s.slice(1):'';}
+let tt;function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast show ${type}`;clearTimeout(tt);tt=setTimeout(()=>t.className='toast',3200);}
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+init();
+</script>
+</body>
+</html>
