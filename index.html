@@ -524,6 +524,9 @@ select.detail-edit-input option{background:var(--bg-elevated);color:var(--text-1
       <span class="nav-icon">💰</span><span class="nav-label">Monthly Fees</span>
     </div>
     <div class="sidebar-section-title">TEAM</div>
+    <div class="nav-item" data-page="team">
+      <span class="nav-icon">🏢</span><span class="nav-label">Team Members</span>
+    </div>
     <div class="nav-item" data-page="chat">
       <span class="nav-icon">💬</span><span class="nav-label">Team Chat</span>
       <span class="nav-badge">3</span>
@@ -1771,6 +1774,98 @@ select.detail-edit-input option{background:var(--bg-elevated);color:var(--text-1
       </div>
     </div>
   </div>
+</div>
+
+<div class="page" id="page-team">
+  <div class="page-header">
+    <div><div class="page-title">Team Members</div><div class="page-subtitle">Invite members and manage their portal access</div></div>
+    <div class="page-actions">
+      <button class="btn btn-primary" onclick="openTeamInviteModal()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Invite Member
+      </button>
+    </div>
+  </div>
+  <div id="teamConfigWarning" class="card" style="border-color:var(--warning);background:var(--warning-soft);display:none">
+    <div style="display:flex;align-items:flex-start;gap:12px">
+      <span style="font-size:20px">⚠️</span>
+      <div><div style="font-weight:600;color:var(--warning);margin-bottom:4px">Supabase not configured</div>
+      <div style="color:var(--text-2);font-size:13px">Set your SUPABASE_URL and SUPABASE_ANON_KEY in the script. Running in demo mode.</div></div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+    <div class="card" style="border-radius:var(--radius-lg);padding:20px 22px;display:flex;flex-direction:column;gap:12px">
+      <div style="width:44px;height:44px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--accent-soft)">👥</div>
+      <div style="font-size:28px;font-weight:800;letter-spacing:-.8px" id="tm-stat-total">—</div>
+      <div style="font-size:13px;color:var(--text-2)">Total Members</div>
+    </div>
+    <div class="card" style="border-radius:var(--radius-lg);padding:20px 22px;display:flex;flex-direction:column;gap:12px">
+      <div style="width:44px;height:44px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--success-soft)">✅</div>
+      <div style="font-size:28px;font-weight:800;letter-spacing:-.8px" id="tm-stat-active">—</div>
+      <div style="font-size:13px;color:var(--text-2)">Active</div>
+    </div>
+    <div class="card" style="border-radius:var(--radius-lg);padding:20px 22px;display:flex;flex-direction:column;gap:12px">
+      <div style="width:44px;height:44px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--warning-soft)">⏳</div>
+      <div style="font-size:28px;font-weight:800;letter-spacing:-.8px" id="tm-stat-pending">—</div>
+      <div style="font-size:13px;color:var(--text-2)">Pending Invite</div>
+    </div>
+    <div class="card" style="border-radius:var(--radius-lg);padding:20px 22px;display:flex;flex-direction:column;gap:12px">
+      <div style="width:44px;height:44px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--info-soft)">🛡️</div>
+      <div style="font-size:28px;font-weight:800;letter-spacing:-.8px" id="tm-stat-roles">—</div>
+      <div style="font-size:13px;color:var(--text-2)">Roles</div>
+    </div>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border-light)">
+      <div style="font-size:15px;font-weight:600">Active Members</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="display:flex;align-items:center;gap:8px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 12px">
+          <svg width="13" height="13" fill="none" stroke="var(--text-3)" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" placeholder="Search members..." id="tm-search" oninput="tmFilter()" style="background:none;border:none;outline:none;color:var(--text-1);font-size:13px;width:160px;font-family:inherit"/>
+        </div>
+        <select id="tm-role-filter" onchange="tmFilter()" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;color:var(--text-1);font-size:13px;font-family:inherit;outline:none">
+          <option value="">All Roles</option>
+          <option value="admin">Admin</option><option value="manager">Manager</option>
+          <option value="designer">Designer</option><option value="developer">Developer</option>
+          <option value="sales">Sales</option><option value="support">Support</option>
+        </select>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3);border-bottom:1px solid var(--border-light)">Member</th>
+          <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3);border-bottom:1px solid var(--border-light)">Role</th>
+          <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3);border-bottom:1px solid var(--border-light)">Status</th>
+          <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3);border-bottom:1px solid var(--border-light)">Joined</th>
+          <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3);border-bottom:1px solid var(--border-light)">Dashboard</th>
+          <th style="padding:10px 14px;border-bottom:1px solid var(--border-light)"></th>
+        </tr></thead>
+        <tbody id="tm-table-body">
+          <tr><td colspan="6" style="padding:40px;text-align:center;color:var(--text-3)">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border-light)">
+      <div style="font-size:15px;font-weight:600">Pending Invites</div>
+      <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;background:var(--warning-soft);color:var(--warning)" id="tm-pending-badge">0 pending</span>
+    </div>
+    <div id="tm-pending-list"><div style="padding:24px;text-align:center;color:var(--text-3);font-size:13px">No pending invites</div></div>
+  </div>
+</div>
+
+<!-- FAB -->
+<div class="fab" id="fab" style="display:none">
+  <div class="fab-actions" id="fab-actions" style="pointer-events:none">
+    <div class="fab-action" onclick="openAddClientPanel()"><div class="fab-action-label">New Client</div><div class="fab-action-btn">👤</div></div>
+    <div class="fab-action" onclick="openAddLeadPanel()"><div class="fab-action-label">New Lead</div><div class="fab-action-btn">🎯</div></div>
+    <div class="fab-action" onclick="openProjectPanel()"><div class="fab-action-label">New Project</div><div class="fab-action-btn">🗂️</div></div>
+    <div class="fab-action" onclick="openAddTaskPanel()"><div class="fab-action-label">New Task</div><div class="fab-action-btn">✅</div></div>
+    <div class="fab-action" onclick="openModal('add-invoice-modal')"><div class="fab-action-label">New Invoice</div><div class="fab-action-btn">🧾</div></div>
+  </div>
+  <button class="fab-main" id="fab-main" onclick="toggleFab()">+</button>
 </div>
   </div><!-- end .content -->
 </div><!-- end .main -->
@@ -3087,17 +3182,76 @@ select.detail-edit-input option{background:var(--bg-elevated);color:var(--text-1
   </div>
 </div>
 
-<!-- FAB -->
-<div class="fab" id="fab" style="display:none">
-  <div class="fab-actions" id="fab-actions" style="pointer-events:none">
-    <div class="fab-action" onclick="openAddClientPanel()"><div class="fab-action-label">New Client</div><div class="fab-action-btn">👤</div></div>
-    <div class="fab-action" onclick="openAddLeadPanel()"><div class="fab-action-label">New Lead</div><div class="fab-action-btn">🎯</div></div>
-    <div class="fab-action" onclick="openProjectPanel()"><div class="fab-action-label">New Project</div><div class="fab-action-btn">🗂️</div></div>
-    <div class="fab-action" onclick="openAddTaskPanel()"><div class="fab-action-label">New Task</div><div class="fab-action-btn">✅</div></div>
-    <div class="fab-action" onclick="openModal('add-invoice-modal')"><div class="fab-action-label">New Invoice</div><div class="fab-action-btn">🧾</div></div>
+<!-- TEAM INVITE MODAL -->
+<div id="team-invite-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.6)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border-light)">
+      <div style="font-size:16px;font-weight:700">Invite Team Member</div>
+      <button onclick="closeTeamInviteModal()" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);cursor:pointer;color:var(--text-2);border:none;background:none">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div style="padding:24px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <label style="font-size:12px;font-weight:600;color:var(--text-2)">First Name</label>
+          <input type="text" id="tm-inv-first" placeholder="Jane" class="form-control"/>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <label style="font-size:12px;font-weight:600;color:var(--text-2)">Last Name</label>
+          <input type="text" id="tm-inv-last" placeholder="Smith" class="form-control"/>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+        <label style="font-size:12px;font-weight:600;color:var(--text-2)">Email Address</label>
+        <input type="email" id="tm-inv-email" placeholder="jane@company.com" class="form-control"/>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">
+        <label style="font-size:12px;font-weight:600;color:var(--text-2)">Role</label>
+        <select id="tm-inv-role" class="form-control">
+          <option value="manager">Manager</option><option value="designer">Designer</option>
+          <option value="developer">Developer</option><option value="sales">Sales</option>
+          <option value="support">Support</option><option value="admin">Admin</option>
+        </select>
+      </div>
+      <div style="padding:14px;background:var(--bg-elevated);border-radius:var(--radius-sm);font-size:12px;color:var(--text-2);margin-bottom:16px">
+        📧 An invite link will be generated. Share it with the member so they can create their account and access their personal dashboard.
+      </div>
+      <div id="tm-link-section" style="display:none">
+        <div style="font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:6px">Invite Link</div>
+        <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;display:flex;align-items:center;gap:10px">
+          <div id="tm-link-text" style="flex:1;font-family:monospace;font-size:11px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</div>
+          <button onclick="tmCopyLink()" class="btn btn-sm btn-secondary">Copy</button>
+        </div>
+      </div>
+    </div>
+    <div style="padding:16px 24px;border-top:1px solid var(--border-light);display:flex;align-items:center;justify-content:flex-end;gap:8px">
+      <button onclick="closeTeamInviteModal()" class="btn btn-ghost">Cancel</button>
+      <button id="tm-send-btn" onclick="tmSendInvite()" class="btn btn-primary">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2 15 22l-4-9-9-4 20-7z"/></svg>
+        Send Invite
+      </button>
+    </div>
   </div>
-  <button class="fab-main" id="fab-main" onclick="toggleFab()">+</button>
 </div>
+
+<!-- TEAM REMOVE MODAL -->
+<div id="team-remove-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:400px;box-shadow:0 24px 80px rgba(0,0,0,.6)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border-light)">
+      <div style="font-size:16px;font-weight:700">Remove Member</div>
+      <button onclick="document.getElementById('team-remove-modal').style.display='none'" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);cursor:pointer;color:var(--text-2);border:none;background:none">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div style="padding:24px"><p style="color:var(--text-2);font-size:13px;line-height:1.6">Remove <strong id="tm-remove-name" style="color:var(--text-1)"></strong>? They will lose dashboard access immediately.</p></div>
+    <div style="padding:16px 24px;border-top:1px solid var(--border-light);display:flex;justify-content:flex-end;gap:8px">
+      <button onclick="document.getElementById('team-remove-modal').style.display='none'" class="btn btn-ghost">Cancel</button>
+      <button id="tm-confirm-remove" onclick="tmConfirmRemove()" class="btn btn-danger">Remove</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ===================== DATA =====================
 let clientsData = [
@@ -3335,6 +3489,7 @@ function navigate(page){
   if(page==='findleads'){renderFLTasks();var ki=document.getElementById('fl-apikey');if(ki&&flApiKey)ki.value=flApiKey;}
   if(page==='phonebook'){_pbAlpha='ALL';_pbStatus='All';_pbSearch='';renderPhonebook();}
   if(page==='analytics')setTimeout(initAnalyticsCharts,100);
+  if(page==='team')tmRender();
   // on mobile close sidebar
   if(window.innerWidth<=768)document.getElementById('sidebar').classList.remove('mobile-open');
 }
@@ -6359,6 +6514,167 @@ document.addEventListener('DOMContentLoaded',function(){
     if(action==='del')mfDel(id);
   },true);
 });
+
+// ===================== TEAM MEMBERS =====================
+const TM_SUPABASE_URL = 'https://jcykegsgqvxtngxtmnmv.supabase.co';
+const TM_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjeWtlZ3NncXZ4dG5neHRtbm12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NTcxNjIsImV4cCI6MjA5NjAzMzE2Mn0.rsBiwmBZHh1yWR7e5To2jk0-0u9Ef6LDX7NxMHX3t7M';
+let tmSB = null, tmMembers = [], tmMemberToRemove = null;
+
+function tmInit(){
+  try{
+    if(typeof window.supabase !== 'undefined'){
+      tmSB = window.supabase.createClient(TM_SUPABASE_URL, TM_SUPABASE_KEY);
+    }
+  }catch(e){ console.warn('Supabase not loaded for team module'); }
+}
+
+async function tmRender(){
+  if(!tmSB){ tmLoadDemo(); return; }
+  try{
+    const {data,error} = await tmSB.from('team_members').select('*').order('created_at',{ascending:false});
+    if(error) throw error;
+    tmMembers = data || [];
+    tmDraw();
+  }catch(e){ tmLoadDemo(); }
+}
+
+function tmLoadDemo(){
+  tmMembers = [
+    {id:1,first_name:'Sarah',last_name:'Johnson',email:'sarah@agency.com',role:'manager',status:'active',created_at:'2024-01-15'},
+    {id:2,first_name:'Marcus',last_name:'Chen',email:'marcus@agency.com',role:'developer',status:'active',created_at:'2024-02-20'},
+    {id:3,first_name:'Aisha',last_name:'Rivera',email:'aisha@agency.com',role:'designer',status:'active',created_at:'2024-03-10'},
+    {id:4,first_name:'Tyler',last_name:'Brooks',email:'tyler@agency.com',role:'sales',status:'pending',created_at:'2024-06-01'},
+  ];
+  tmDraw();
+}
+
+function tmDraw(){
+  var active = tmMembers.filter(function(m){return m.status!=='pending';});
+  var pending = tmMembers.filter(function(m){return m.status==='pending';});
+  function el(id){return document.getElementById(id);}
+  el('tm-stat-total').textContent = tmMembers.length;
+  el('tm-stat-active').textContent = active.length;
+  el('tm-stat-pending').textContent = pending.length;
+  el('tm-stat-roles').textContent = [...new Set(tmMembers.map(function(m){return m.role;}))].length;
+  el('tm-pending-badge').textContent = pending.length + ' pending';
+
+  var tbody = el('tm-table-body');
+  if(!active.length){
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:40px;text-align:center;color:var(--text-3)">No active members yet — invite your first team member</td></tr>';
+  } else {
+    var rows = '';
+    active.forEach(function(m){
+      var ini = ((m.first_name||'?')[0]+(m.last_name||'?')[0]).toUpperCase();
+      var joined = m.created_at ? new Date(m.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+      var rcMap = {admin:'background:var(--danger-soft);color:var(--danger)',manager:'background:var(--accent-soft);color:var(--accent)',developer:'background:var(--info-soft);color:var(--info)',designer:'background:var(--warning-soft);color:var(--warning)',sales:'background:var(--success-soft);color:var(--success)',support:'background:var(--bg-hover);color:var(--text-2)'};
+      var rc = rcMap[m.role]||'background:var(--bg-hover);color:var(--text-2)';
+      var roleName = m.role.charAt(0).toUpperCase()+m.role.slice(1);
+      rows += '<tr>';
+      rows += '<td style="padding:12px 14px;border-bottom:1px solid var(--border-light);vertical-align:middle"><div style="display:flex;align-items:center;gap:10px"><div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#7c3aed);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">'+ini+'</div><div><div style="font-weight:500">'+m.first_name+' '+m.last_name+'</div><div style="color:var(--text-3);font-size:12px">'+m.email+'</div></div></div></td>';
+      rows += '<td style="padding:12px 14px;border-bottom:1px solid var(--border-light);vertical-align:middle"><span style="display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;'+rc+'">'+roleName+'</span></td>';
+      rows += '<td style="padding:12px 14px;border-bottom:1px solid var(--border-light);vertical-align:middle"><span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;background:var(--success-soft);color:var(--success)">Active</span></td>';
+      rows += '<td style="padding:12px 14px;border-bottom:1px solid var(--border-light);color:var(--text-2)">'+joined+'</td>';
+      rows += '<td style="padding:12px 14px;border-bottom:1px solid var(--border-light)"><a href="https://small-crm-h45u.vercel.app/team-dashboard.html?member='+m.id+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:var(--radius-sm);font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--bg-elevated);color:var(--text-1);text-decoration:none">View Dashboard</a></td>';
+      rows += '<td style="padding:12px 14px;border-bottom:1px solid var(--border-light)"><button onclick="tmOpenRemove('+m.id+',\''+m.first_name+' '+m.last_name+'\')" style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:var(--radius-sm);font-size:12px;font-weight:500;cursor:pointer;border:none;background:var(--danger-soft);color:var(--danger);font-family:inherit">Remove</button></td>';
+      rows += '</tr>';
+    });
+    tbody.innerHTML = rows;
+  }
+
+  var pl = el('tm-pending-list');
+  if(!pending.length){
+    pl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-3);font-size:13px">No pending invites</div>';
+  } else {
+    var pitems = '';
+    pending.forEach(function(m){
+      var sent = m.created_at ? new Date(m.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+      pitems += '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border-light)">';
+      pitems += '<div style="display:flex;align-items:center;gap:10px"><div style="width:8px;height:8px;border-radius:50%;background:var(--warning)"></div>';
+      pitems += '<div><div style="font-weight:500;font-size:13px">'+m.email+'</div><div style="color:var(--text-3);font-size:12px">Invited '+sent+' · '+m.role.charAt(0).toUpperCase()+m.role.slice(1)+'</div></div></div>';
+      pitems += '<button onclick="tmOpenRemove('+m.id+',\''+m.email+'\')" style="display:inline-flex;padding:5px 10px;border-radius:var(--radius-sm);font-size:12px;font-weight:500;cursor:pointer;border:none;background:var(--danger-soft);color:var(--danger);font-family:inherit">Cancel</button>';
+      pitems += '</div>';
+    });
+    pl.innerHTML = pitems;
+  }
+}
+function tmFilter(){
+  const q = (document.getElementById('tm-search').value||'').toLowerCase();
+  const role = document.getElementById('tm-role-filter').value;
+  const filtered = tmMembers.filter(m => {
+    const name = (m.first_name+' '+m.last_name+' '+m.email).toLowerCase();
+    return (!q||name.includes(q)) && (!role||m.role===role);
+  });
+  const saved = tmMembers;
+  tmMembers = filtered;
+  tmDraw();
+  tmMembers = saved;
+}
+
+function openTeamInviteModal(){
+  ['tm-inv-first','tm-inv-last','tm-inv-email'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const r=document.getElementById('tm-inv-role');if(r)r.value='manager';
+  const ls=document.getElementById('tm-link-section');if(ls)ls.style.display='none';
+  const m=document.getElementById('team-invite-modal');if(m)m.style.display='flex';
+}
+function closeTeamInviteModal(){
+  const m=document.getElementById('team-invite-modal');if(m)m.style.display='none';
+}
+
+async function tmSendInvite(){
+  const first=(document.getElementById('tm-inv-first').value||'').trim();
+  const last=(document.getElementById('tm-inv-last').value||'').trim();
+  const email=(document.getElementById('tm-inv-email').value||'').trim();
+  const role=document.getElementById('tm-inv-role').value;
+  if(!first||!email){showToast('First name and email required','error');return;}
+  const btn=document.getElementById('tm-send-btn');
+  btn.textContent='Sending...';btn.disabled=true;
+  const link='https://small-crm-h45u.vercel.app/team-signup.html?invite='+btoa(email+'|'+role+'|'+first+'|'+last);
+  try{
+    if(tmSB){
+      const {error}=await tmSB.from('team_members').insert({first_name:first,last_name:last,email,role,status:'pending'});
+      if(error)throw error;
+    }
+    tmMembers.unshift({id:Date.now(),first_name:first,last_name:last,email,role,status:'pending',created_at:new Date().toISOString()});
+    tmDraw();
+    document.getElementById('tm-link-text').textContent=link;
+    document.getElementById('tm-link-section').style.display='block';
+    showToast('Invite ready — copy the link and share it','success');
+  }catch(e){showToast(e.message||'Failed','error');}
+  finally{btn.innerHTML='<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2 15 22l-4-9-9-4 20-7z"/></svg> Send Invite';btn.disabled=false;}
+}
+
+function tmCopyLink(){
+  navigator.clipboard.writeText(document.getElementById('tm-link-text').textContent).then(()=>showToast('Link copied!','success'));
+}
+
+function tmOpenRemove(id,name){
+  tmMemberToRemove=id;
+  document.getElementById('tm-remove-name').textContent=name;
+  document.getElementById('team-remove-modal').style.display='flex';
+}
+
+async function tmConfirmRemove(){
+  if(!tmMemberToRemove)return;
+  const btn=document.getElementById('tm-confirm-remove');btn.textContent='Removing...';btn.disabled=true;
+  try{
+    if(tmSB){const{error}=await tmSB.from('team_members').delete().eq('id',tmMemberToRemove);if(error)throw error;}
+    tmMembers=tmMembers.filter(m=>m.id!==tmMemberToRemove);
+    tmDraw();
+    showToast('Member removed','success');
+    document.getElementById('team-remove-modal').style.display='none';
+  }catch(e){showToast(e.message,'error');}
+  finally{btn.textContent='Remove';btn.disabled=false;tmMemberToRemove=null;}
+}
+
+// Load Supabase JS if not already present
+if(typeof window.supabase === 'undefined'){
+  const s=document.createElement('script');
+  s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+  s.onload=()=>tmInit();
+  document.head.appendChild(s);
+} else { tmInit(); }
+// ===================== END TEAM MEMBERS =====================
+
 </script>
 </body>
 </html>
