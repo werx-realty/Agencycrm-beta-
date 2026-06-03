@@ -3192,7 +3192,8 @@ select.detail-edit-input option{background:var(--bg-elevated);color:var(--text-1
       </button>
     </div>
     <div style="padding:24px">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div id="tm-inv-form-fields">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
         <div style="display:flex;flex-direction:column;gap:6px">
           <label style="font-size:12px;font-weight:600;color:var(--text-2)">First Name</label>
           <input type="text" id="tm-inv-first" placeholder="Jane" class="form-control"/>
@@ -3230,6 +3231,11 @@ select.detail-edit-input option{background:var(--bg-elevated);color:var(--text-1
       </div>
       <div style="padding:14px;background:var(--bg-elevated);border-radius:var(--radius-sm);font-size:12px;color:var(--text-2);margin-bottom:16px">
         📧 An invite link will be generated. Share it with the member so they can create their account and access their personal dashboard.
+      </div>
+    </div><!-- end tm-inv-form-fields -->
+      <div id="tm-invite-success-msg" style="display:none;align-items:center;gap:10px;padding:12px;background:var(--success-soft);border-radius:var(--radius-sm);margin-bottom:12px">
+        <span style="font-size:18px">✅</span>
+        <div style="font-size:13px;color:var(--success);font-weight:500">Invite created! Copy the link below and share it with your team member.</div>
       </div>
       <div id="tm-link-section" style="display:none">
         <div style="font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:6px">Invite Link</div>
@@ -6647,6 +6653,9 @@ function openTeamInviteModal(){
   ['tm-inv-first','tm-inv-last','tm-inv-email'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const r=document.getElementById('tm-inv-role');if(r)r.value='manager';
   const ls=document.getElementById('tm-link-section');if(ls)ls.style.display='none';
+  const ff=document.getElementById('tm-inv-form-fields');if(ff)ff.style.display='block';
+  const sm=document.getElementById('tm-invite-success-msg');if(sm)sm.style.display='none';
+  tmSetMode('personal');
   const m=document.getElementById('team-invite-modal');if(m)m.style.display='flex';
 }
 function closeTeamInviteModal(){
@@ -6670,9 +6679,10 @@ async function tmSendInvite(){
     }
     tmMembers.unshift({id:Date.now(),first_name:first,last_name:last,email,role,status:'pending',created_at:new Date().toISOString()});
     tmDraw();
-    document.getElementById('tm-link-text').textContent=link;
-    document.getElementById('tm-link-section').style.display='block';
-    showToast('Invite ready — copy the link and share it','success');
+    // Close modal and copy link to clipboard automatically
+    closeTeamInviteModal();
+    navigator.clipboard.writeText(link).catch(()=>{});
+    showToast('✅ Invite link copied to clipboard — paste and share it!','success');
   }catch(e){showToast(e.message||'Failed','error');}
   finally{btn.innerHTML='<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2 15 22l-4-9-9-4 20-7z"/></svg> Send Invite';btn.disabled=false;}
 }
